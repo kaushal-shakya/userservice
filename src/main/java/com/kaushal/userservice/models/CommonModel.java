@@ -13,7 +13,6 @@ import java.util.UUID;
 public class CommonModel {
 
     @Id
-    @GeneratedValue( generator = "uuidgenerator", strategy = GenerationType.IDENTITY)
-    @GenericGenerator(name = "uuidgenerator", strategy = "uuid2")
-    private UUID uuid;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 }

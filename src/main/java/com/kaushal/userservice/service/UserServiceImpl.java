@@ -8,6 +8,8 @@ import com.kaushal.userservice.models.Account;
 import com.kaushal.userservice.models.CommonModel;
 import com.kaushal.userservice.repositories.AccountRepository;
 import com.kaushal.userservice.security.AuthUtil;
+import org.apache.kafka.clients.admin.NewTopic;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Random;
 
 @Service
 public class UserServiceImpl implements UserService
@@ -25,13 +28,16 @@ public class UserServiceImpl implements UserService
     private final AuthenticationManager authenticationManager;
     private final AuthUtil authUtil;
     private final PasswordEncoder encoder;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
-    public UserServiceImpl(AccountRepository accountRepository, AuthenticationManager authenticationManager, AuthUtil authUtil, PasswordEncoder encoder)
+    public UserServiceImpl(AccountRepository accountRepository, AuthenticationManager authenticationManager, AuthUtil authUtil, PasswordEncoder encoder,
+                           KafkaTemplate<String, String> kafkaTemplate)
     {
         this.accountRepository = accountRepository;
         this.authenticationManager = authenticationManager;
         this.authUtil = authUtil;
         this.encoder = encoder;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
 
@@ -47,7 +53,12 @@ public class UserServiceImpl implements UserService
 
         Account new_acc = accountRepository.save(account);
         CommonModel response = new CommonModel();
-        response.setUuid(new_acc.getUuid());
+        response.setId(new_acc.getId());
+
+        double i = Math.random();
+        String message = "Message no : " + i;
+
+        kafkaTemplate.send("newaccounttopic", "1", message );
         return response;
     }
 
@@ -60,14 +71,14 @@ public class UserServiceImpl implements UserService
         Account account = (Account) authentication.getPrincipal();
         String token = authUtil.generateAccessToken(account);
 
-        return new LoginResponseDto(account.getUuid().toString(), token);
+        return new LoginResponseDto(account.getId().toString(), token);
     }
 
     @Override
     public List<RegisteredUserDto> getAllUsers() {
         List<RegisteredUserDto> users = accountRepository.findAll().stream().map(account -> {
             RegisteredUserDto dto = new RegisteredUserDto();
-            dto.setUuid(account.getUuid().toString());
+            dto.setUuid(account.getId().toString());
             dto.setEmail(account.getEmail());
             dto.setFirstName(account.getFirstName());
             dto.setLastName(account.getLastName());
